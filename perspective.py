@@ -2,8 +2,8 @@ import pygame
 import numpy as np
 from transformation_matrices import *
 
-focal = 4
-alpha = beta = 70
+focal = 3
+alpha = beta = 100
 moving_speed = 0.05
 rotation_speed = 0.01
 mouse_sensitivity = 0.002
@@ -12,7 +12,7 @@ mouse_sensitivity = 0.002
 @staticmethod
 def project_points(points):
     points_z = points[..., 2][..., None]
-    points_z[points_z == 0] = 1e-3
+    points_z[points_z < 1e-1] = 1e-1
     return points / points_z
 
 
@@ -33,6 +33,7 @@ class Perspective:
     def control(self):
         key = pygame.key.get_pressed()
         if key[pygame.K_d]:
+            print(self.__moving_speed * move_a_d(self.__angle_h))
             self.__position += self.__moving_speed * move_a_d(self.__angle_h)
         if key[pygame.K_q]:
             self.__position -= self.__moving_speed * move_a_d(self.__angle_h)
@@ -46,13 +47,13 @@ class Perspective:
             self.__position -= self.__v * self.__moving_speed
 
         if key[pygame.K_RIGHT]:
-            self.__camera_yaw(self.__rotation_speed)
+            self.__angle_h += self.__rotation_speed
         if key[pygame.K_LEFT]:
-            self.__camera_yaw(-self.__rotation_speed)
+            self.__angle_h -= self.__rotation_speed
         if key[pygame.K_UP]:
-            self.__camera_pitch(self.__rotation_speed)
+            self.__angle_v += self.__rotation_speed
         if key[pygame.K_DOWN]:
-            self.__camera_pitch(-self.__rotation_speed)
+            self.__angle_v -= self.__rotation_speed
 
         dx, dy = pygame.mouse.get_rel()
 
@@ -65,12 +66,6 @@ class Perspective:
             self.__angle_v = max(min(self.__angle_v, 90), -90)
 
             pygame.mouse.set_pos(screen_center)
-
-    def __camera_yaw(self, angle):
-        self.__angle_h += angle
-
-    def __camera_pitch(self, angle):
-        self.__angle_v += angle
 
     def get_position(self):
         return self.__position
@@ -94,10 +89,10 @@ class Perspective:
         ])
 
     def get_angle_y(self):
-        return self.__angle_h
+        return self.__angle_v
 
     def get_angle_x(self):
-        return self.__angle_v
+        return self.__angle_h
 
     def rotation_matrix(self):
         ux, uy, uz = self.__u[:3]
@@ -109,19 +104,3 @@ class Perspective:
             [uz, vz, kz, 0],
             [0, 0, 0, 1]
         ])
-
-    def axiiIdentity(self):
-        self.__k = np.array([0, 0, 1, 1])
-        self.__v = np.array([0, 1, 0, 1])
-        self.__u = np.array([1, 0, 0, 1])
-
-    def camera_update_axii(self):
-        rotate = rotate_x(self.__angle_v) @ rotate_y(self.__angle_h)
-        self.axiiIdentity()
-        self.__k = self.__k @ rotate
-        self.__u = self.__u @ rotate
-        self.__v = self.__v @ rotate
-
-    def camera_matrix(self):
-        self.camera_update_axii()
-        return self.translation_matrix() @ self.rotation_matrix()

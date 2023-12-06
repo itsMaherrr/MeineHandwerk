@@ -27,6 +27,14 @@ def rotate_y(theta):
     ])
 
 
+def rotate_z(theta):
+    return np.array([
+        [np.cos(theta), np.sin(theta), 0],
+        [-np.sin(theta), np.cos(theta), 0],
+        [0, 0, 1]
+    ])
+
+
 def move_a_d(theta):
     return np.array([
         np.cos(theta), 0, -np.sin(theta)

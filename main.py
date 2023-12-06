@@ -1,87 +1,94 @@
-import pygame as pg
+
+
+# Full Name : MEBIROUK Maher
+
+
 import numpy as np
+import pygame
+import cProfile
+import pstats
+
+from object_3d import *
+from perspective import *
+from projection import *
 
 
-def rotate(cube):
-    pass
-
-def save_surfaces(points):
-    print('points', points)
-
-def draw_cube(cube, f, k):
-    transformed = cube
-    save_surfaces(transformed)
-    points_2d = np.dot(k, point_transformat(transformed, f).T)
-    print('2D points', points_2d)
+app_name = 'MeineHandwerk'
+fps = 120
+initial_position = [0.5, 5.5, 5]
+radius = 3
+height, width = 1600, 866
 
 
-def point_generator(center, size):
-    center = np.array(center)
-    half_size = size / 2.0
+class Renderer:
+    def __init__(self):
+        pygame.init()
+        pygame.mouse.set_visible(False)
+        self.__resolution = self.__height, self.__width = height, width
+        self.__center = self.__height // 2, self.__width // 2
+        self.__fps = fps
+        self.__screen = pygame.display.set_mode(self.__resolution)
 
-    vertices = np.array([
-        [-half_size, -half_size, -half_size],  # Front bottom left
-        [half_size, -half_size, -half_size],  # Front bottom right
-        [half_size, half_size, -half_size],  # Front top right
-        [-half_size, half_size, -half_size],  # Front top left
-        [-half_size, -half_size, half_size],  # Back bottom left
-        [half_size, -half_size, half_size],  # Back bottom right
-        [half_size, half_size, half_size],  # Back top right
-        [-half_size, half_size, half_size]  # Back top left
-    ])
+        self.__clock = pygame.time.Clock()
+        self.__crosshair = pygame.image.load('assets/crosshair.png')
+        self.__objects = []
+        self.__perspective = None
+        self.__projector = None
+        self.set_perspective()
+        self.set_projector()
+        self.create_object([0.5, 5.5, 12])
+        self.create_object([9.5, 5.5, 12])
 
-    vertices += center
+    def get_center(self):
+        return self.__center
 
-    return vertices
+    def get_screen(self):
+        return self.__screen
 
+    def get_perspective(self):
+        return self.__perspective
 
-def point_transformat(points, f):
-    points_x = points[..., 0]
-    points_y = points[..., 1]
-    points_z = (points[..., 2] - f)
-    for point in points_z:
-        if point == 0:
-            point += 1e-4
+    def get_projector(self):
+        return self.__projector
 
-    return np.column_stack((points_x / points_z, points_y / points_z, np.ones(len(points))))
+    def get_height(self):
+        return self.__height
 
+    def get_width(self):
+        return self.__width
 
-def main():
-    cube = [
-        {'center': (0, 0, 0),
-         'points': point_generator((0, 0, 0), 2),
-         'color': (255, 255, 10)
-         },
-        {'center': (-2, 0, 0),
-         'points': point_generator((-2, 0, 0), 2),
-         'color': (50, 50, 50)
-         }]
+    def get_crosshair(self):
+        return self.__crosshair
 
-    player = [0, 0, -2]
+    def set_projector(self):
+        self.__projector = Projection(self)
 
-    pg.init()
-    f = 0.5
-    alpha = 100
-    beta = 100
-    W, H = 600, 600
-    u0 = W // 2
-    v0 = H // 2
-    k = np.array([[f * alpha, 0, u0], [0, f * beta, v0]])
-    screen = pg.display.set_mode((W, H))
+    def set_perspective(self):
+        self.__perspective = Perspective(self, initial_position)
 
-    for c in cube:
-        draw_cube(c.get('points'), f, k)
+    def create_object(self, center, radius=radius):
+        self.__objects.append(Cube(self, center, radius))
 
-    running = True
-    while running:
-        for event in pg.event.get():
-            pass
-        screen.fill((0, 0, 0))
+    def __draw(self):
+        self.__screen.fill(pygame.Color('darkslategray'))
+        [cube.draw() for cube in sorted(self.__objects,
+                                        key=lambda g: np.linalg.norm(g.get_center() - self.__perspective.get_position()),
+                                        reverse=True)]
 
+    def __draw_crosshair(self):
+        self.__screen.blit(self.get_crosshair(), self.get_center())
+
+    def run(self):
+        while True:
+            self.__draw()
+            self.__perspective.control()
+            self.__draw_crosshair()
+            [exit() for i in pygame.event.get() if i.type == pygame.QUIT]
+            pygame.display.set_caption(app_name)
+            pygame.display.flip()
+            self.__clock.tick(self.__fps)
 
 
 if __name__ == '__main__':
-    center = (0, 0, 0)
-    cube_size = 4
-    print(point_generator(center, cube_size))
-    main()
+    app = Renderer()
+    app.run()
