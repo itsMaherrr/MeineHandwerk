@@ -3,6 +3,7 @@ import pygame.draw
 
 from transformation_matrices import *
 from perspective import project_points
+from texture import draw_quad
 
 FBL = 0
 FTL = 1
@@ -12,6 +13,10 @@ BBL = 4
 BTL = 5
 BTR = 6
 BBR = 7
+
+
+CLOSE = 0
+FAR = 1
 
 
 def create_cube_vertices(center, radius):
@@ -28,8 +33,9 @@ def create_cube_vertices(center, radius):
 
 
 class Cube:
-    def __init__(self, renderer, position, radius):
+    def __init__(self, renderer, texture, position, radius):
         self.__renderer = renderer
+        self.__texture = [pygame.transform.smoothscale(texture, (8, 8)), pygame.transform.smoothscale(texture, (4, 4))]
         self.__center = position
         self.__vertices = create_cube_vertices(position, radius)
         self.__faces = np.array([(FBL, FTL, FTR, FBR), (BBL, BTL, BTR, BBR), (FBL, BBL, BTL, FTL),
@@ -37,6 +43,9 @@ class Cube:
 
     def get_center(self):
         return self.__center
+
+    def get_texture(self):
+        return self.__texture
 
     def draw(self):
         self.screen_projection()
@@ -54,26 +63,24 @@ class Cube:
 
         focal = self.__renderer.get_perspective().get_focal()
 
-        if np.any(translated_vertices_f[..., -1] <= 0):
+        if np.any(translated_vertices_f[..., -1] <= focal):
             return
 
         position_z = self.__renderer.get_perspective().get_position()[-1]
 
         sorted_faces = np.linalg.norm(position - np.mean(translated_vertices_f[self.__faces], axis=1), axis=1)
-        apparent_faces = np.argsort(sorted_faces[sorted_faces > self.__renderer.get_perspective().get_focal()])[:3]
+        apparent_faces = np.argsort(sorted_faces)[:3]
 
         projected_vertices = project_points(translated_vertices_f)
 
         screen_faces = np.einsum('ijk, kl -> ijl', projected_vertices[self.__faces[apparent_faces]],
                                     self.__renderer.get_projector().get_screen_matrix().T)
 
-        colors = {0: (255, 0, 0), 1: (0, 255, 0), 2: (0, 0, 255), 3: (255, 255, 0), 4: (255, 0, 255),
-                  5: (128, 128, 128)}
-
         i = 0
         for face in screen_faces:
-            pygame.draw.polygon(self.__renderer.get_screen(), colors[apparent_faces[i]], face)
-            i += 1
+            #pygame.draw.polygon(self.__renderer.get_screen(), colors[apparent_faces[i]], face)
+            draw_quad(self.__renderer.get_screen(), face, self.get_texture()[CLOSE])
+
 
     def translate(self, pos):
         self.__vertices = self.__vertices @ translate(pos)

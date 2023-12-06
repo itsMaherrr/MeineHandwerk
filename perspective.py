@@ -2,16 +2,16 @@ import pygame
 import numpy as np
 from transformation_matrices import *
 
-focal = 3
-alpha = beta = 100
-moving_speed = 0.05
+focal = 7
+alpha = beta = 40
+moving_speed = 0.1
 rotation_speed = 0.01
 mouse_sensitivity = 0.002
 
 
 @staticmethod
 def project_points(points):
-    points_z = points[..., 2][..., None]
+    points_z = points[..., 2][..., None] - focal
     points_z[points_z < 1e-1] = 1e-1
     return points / points_z
 
@@ -33,7 +33,6 @@ class Perspective:
     def control(self):
         key = pygame.key.get_pressed()
         if key[pygame.K_d]:
-            print(self.__moving_speed * move_a_d(self.__angle_h))
             self.__position += self.__moving_speed * move_a_d(self.__angle_h)
         if key[pygame.K_q]:
             self.__position -= self.__moving_speed * move_a_d(self.__angle_h)
