@@ -3,10 +3,14 @@ import numpy as np
 from transformation_matrices import *
 
 focal = 7
-alpha = beta = 40
-moving_speed = 0.1
-rotation_speed = 0.01
+alpha = beta = 100
+moving_speed = 0.2
+rotation_speed = np.pi / 180
 mouse_sensitivity = 0.002
+gravitational_pull = 0.1
+
+
+max_jump = 20
 
 
 @staticmethod
@@ -30,6 +34,8 @@ class Perspective:
         self.__angle_v = 0
         self.__angle_h = 0
 
+        self.__jump = max_jump
+
     def control(self):
         key = pygame.key.get_pressed()
         if key[pygame.K_d]:
@@ -43,7 +49,15 @@ class Perspective:
         if key[pygame.K_LCTRL]:
             self.__position += self.__v * self.__moving_speed
         if key[pygame.K_SPACE]:
-            self.__position -= self.__v * self.__moving_speed
+            if self.__renderer.get_map().on_ground(self.__position) and self.__jump == max_jump:
+                if self.__jump == max_jump:
+                    self.__jump = 0
+                self.__position -= self.__v * self.__moving_speed * 2
+                self.__jump += 1
+
+        if self.__jump != max_jump:
+            self.__position -= self.__v * self.__moving_speed * 2
+            self.__jump += 1
 
         if key[pygame.K_RIGHT]:
             self.__angle_h += self.__rotation_speed
@@ -65,6 +79,15 @@ class Perspective:
             self.__angle_v = max(min(self.__angle_v, 90), -90)
 
             pygame.mouse.set_pos(screen_center)
+
+        self.fall_for_gravity()
+
+    def fall_for_gravity(self):
+        position = self.__position + self.__v * gravitational_pull
+
+        # if nothing is intercepting player or not currently jumping
+        if not self.__renderer.get_map().obstacle_at(position) and self.__jump == max_jump:
+            self.__position = position
 
     def get_position(self):
         return self.__position

@@ -2,6 +2,7 @@ import pygame
 
 
 stone = pygame.image.load('textures/stone.png')
+floor = pygame.image.load('textures/floor.jpg')
 
 
 def __lerp(p1, p2, f):

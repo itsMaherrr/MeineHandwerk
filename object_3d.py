@@ -35,7 +35,7 @@ def create_cube_vertices(center, radius):
 class Cube:
     def __init__(self, renderer, texture, position, radius):
         self.__renderer = renderer
-        self.__texture = [pygame.transform.smoothscale(texture, (8, 8)), pygame.transform.smoothscale(texture, (4, 4))]
+        self.__texture = [pygame.transform.smoothscale(texture, (10, 10)), pygame.transform.smoothscale(texture, (4, 4))]
         self.__center = position
         self.__vertices = create_cube_vertices(position, radius)
         self.__faces = np.array([(FBL, FTL, FTR, FBR), (BBL, BTL, BTR, BBR), (FBL, BBL, BTL, FTL),
@@ -44,8 +44,8 @@ class Cube:
     def get_center(self):
         return self.__center
 
-    def get_texture(self):
-        return self.__texture
+    def __get_texture(self, index):
+        return self.__texture[index]
 
     def draw(self):
         self.screen_projection()
@@ -66,8 +66,6 @@ class Cube:
         if np.any(translated_vertices_f[..., -1] <= focal):
             return
 
-        position_z = self.__renderer.get_perspective().get_position()[-1]
-
         sorted_faces = np.linalg.norm(position - np.mean(translated_vertices_f[self.__faces], axis=1), axis=1)
         apparent_faces = np.argsort(sorted_faces)[:3]
 
@@ -79,7 +77,7 @@ class Cube:
         i = 0
         for face in screen_faces:
             #pygame.draw.polygon(self.__renderer.get_screen(), colors[apparent_faces[i]], face)
-            draw_quad(self.__renderer.get_screen(), face, self.get_texture()[CLOSE])
+            draw_quad(self.__renderer.get_screen(), face, self.__get_texture(CLOSE))
 
 
     def translate(self, pos):

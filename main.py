@@ -11,7 +11,8 @@ import pstats
 from object_3d import *
 from perspective import *
 from projection import *
-from texture import stone
+from map import *
+from texture import stone, floor
 
 
 app_name = 'MeineHandwerk'
@@ -39,6 +40,7 @@ class Renderer:
         self.__objects = []
         self.__perspective = None
         self.__projector = None
+        self.set_map()
         self.set_perspective()
         self.set_projector()
         self.create_object([0.5, 5.5, 25], stone.convert_alpha())
@@ -53,6 +55,9 @@ class Renderer:
 
     def get_screen(self):
         return self.__screen
+
+    def get_resolution(self):
+        return self.__resolution
 
     def get_perspective(self):
         return self.__perspective
@@ -72,6 +77,12 @@ class Renderer:
     def get_sky(self):
         return self.__sky
 
+    def get_map(self):
+        return self.__map
+
+    def set_map(self):
+        self.__map = Map(self, floor.convert())
+
     def set_projector(self):
         self.__projector = Projection(self)
 
@@ -82,9 +93,12 @@ class Renderer:
         self.__objects.append(Cube(self, texture, center, radius))
 
     def __draw(self):
+        self.__draw_sky()
+        self.__map.draw()
         [cube.draw() for cube in sorted(self.__objects,
                                         key=lambda g: np.linalg.norm(g.get_center() - self.__perspective.get_position()),
                                         reverse=True)]
+        self.__draw_crosshair()
 
     def __draw_crosshair(self):
         self.__screen.blit(self.get_crosshair(), self.get_center())
@@ -94,14 +108,11 @@ class Renderer:
 
     def run(self):
         while True:
-            self.__draw_sky()
             self.__draw()
             self.__perspective.control()
-            self.__draw_crosshair()
             [exit() for i in pygame.event.get() if i.type == pygame.QUIT]
             pygame.display.set_caption(app_name)
             pygame.display.flip()
-            print(self.__clock.get_fps())
             self.__clock.tick(self.__fps)
 
 
