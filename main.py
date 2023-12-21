@@ -103,7 +103,18 @@ class Renderer:
         self.__objects.append(Cube(self, texture, center, radius))
 
     def build_cube(self, position, texture):
-        center = position[0], y, position[-1]
+        center = np.array([position[0] + (4 - position[0] % 4), y, position[-1] + (4 - position[-1] % 4)])
+        cubes = np.array([cube.get_center() for cube in self.__objects])
+        collision_x = np.abs(cubes[..., 0] - center[0]) < radius
+        collision_z = np.abs(cubes[..., -1] - center[-1]) < radius
+        cond = collision_x & collision_z
+        collided = cubes[cond]
+        max_y = y + 2 * radius
+        if collided.size > 1:
+            max_y = np.min(cubes[cond][..., 1])
+        elif collided.size == 1:
+            max_y = collided[..., 1]
+        center[1] = max_y - 2 * radius
         self.create_object(center, texture)
 
     def __draw(self):
