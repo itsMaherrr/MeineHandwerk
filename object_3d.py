@@ -18,6 +18,11 @@ BBR = 7
 CLOSE = 0
 FAR = 1
 
+CLOSE_DISTANCE = 30
+
+BOTTOM_FACE = 4
+TOP_FACE = 5
+
 
 def create_cube_vertices(center, radius):
     return np.array([
@@ -51,6 +56,7 @@ class Cube:
         self.screen_projection()
 
     def screen_projection(self):
+        height, width = self.__renderer.get_resolution()
         position = self.__renderer.get_perspective().get_position()[:3]
 
         angle_x = self.__renderer.get_perspective().get_angle_x()
@@ -63,21 +69,30 @@ class Cube:
 
         focal = self.__renderer.get_perspective().get_focal()
 
-        if np.any(translated_vertices_f[..., -1] <= focal):
+        if np.any(translated_vertices_f[..., -1] <= -focal):
             return
 
-        sorted_faces = np.linalg.norm(position - np.mean(translated_vertices_f[self.__faces], axis=1), axis=1)
+        #sorted_faces = np.linalg.norm(position - np.mean(translated_vertices_f[self.__faces], axis=1), axis=1)
+        sorted_faces = np.linalg.norm(np.mean(translated_vertices_f[self.__faces], axis=1), axis=1)
         apparent_faces = np.argsort(sorted_faces)[:3]
+
+        texture_dist = CLOSE if sorted_faces[apparent_faces[-1]] < CLOSE_DISTANCE else FAR
 
         projected_vertices = project_points(translated_vertices_f)
 
-        screen_faces = np.einsum('ijk, kl -> ijl', projected_vertices[self.__faces[apparent_faces]],
-                                    self.__renderer.get_projector().get_screen_matrix().T)
+        #screen_faces = np.einsum('ijk, kl -> ijl', projected_vertices[self.__faces[apparent_faces]],
+         #                           self.__renderer.get_projector().get_screen_matrix().T)
+
+        screen_faces = (self.__renderer.get_projector().get_screen_matrix() @ projected_vertices.T).T
+        screen_faces = screen_faces[self.__faces[apparent_faces[::-1]]]
+
+        screen_faces = screen_faces[~(np.all(screen_faces[..., 0] > height, axis=1) |
+                                                 np.all(screen_faces[..., 1] > width, axis=1))]
 
         i = 0
         for face in screen_faces:
-            #pygame.draw.polygon(self.__renderer.get_screen(), colors[apparent_faces[i]], face)
-            draw_quad(self.__renderer.get_screen(), face, self.__get_texture(CLOSE))
+            #pygame.draw.polygon(self.__renderer.get_screen(), (255, 0, 0), face)
+            draw_quad(self.__renderer.get_screen(), face, self.__get_texture(texture_dist))
 
 
     def translate(self, pos):

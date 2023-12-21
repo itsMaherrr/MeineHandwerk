@@ -7,7 +7,7 @@ from texture import draw_quad
 
 shape = np.array([10, 10])
 cell_size = np.array([5, 5])
-y = 8.5
+y = 7.5
 
 CLOSE = 0
 FAR = 1
@@ -66,23 +66,52 @@ class Map:
 
         focal = self.__renderer.get_perspective().get_focal()
 
-        translated_vertices_f = translated_vertices_f[np.all(translated_vertices_f[..., -1] >= 0, axis=1)]
+        translated_vertices_f = translated_vertices_f[np.all(translated_vertices_f[..., -1] >= -focal, axis=1)]
 
         projected_vertices = project_points(translated_vertices_f)
 
-        screen_ground_cells = np.einsum('ijk, kl -> ijl', projected_vertices,
+        all_ground_cells = np.einsum('ijk, kl -> ijl', projected_vertices,
                                  self.__renderer.get_projector().get_screen_matrix().T)
 
+        screen_ground_cells = all_ground_cells[~(np.all(all_ground_cells[..., 0] > height, axis=1) |
+                                                 np.all(all_ground_cells[..., 1] > width, axis=1))]
+
+
+
         for cell in screen_ground_cells:
-            pygame.draw.polygon(self.__renderer.get_screen(), (0, 143, 0), cell)
+            pygame.draw.polygon(self.__renderer.get_screen(), (0, 100, 0), cell)
             #draw_quad(self.__renderer.get_screen(), cell, self.__get_texture(CLOSE))
+
+    def is_above_cube(self, position, gravitational_pull):
+        position_v = position[1]
+        radius = self.__renderer.get_radius()
+        height = self.__renderer.get_perspective().get_height()
+        cubes_v = np.array([cube.get_center() for cube in self.__renderer.get_cubes()])[..., 1]
+
+        return np.any(cubes_v - (height / 2) - position_v >= radius + height - gravitational_pull)
+
+
+    def check_horizontal_collision(self, position_h, cubes_h, radius):
+        return np.any(np.abs(cubes_h - position_h) < radius)
+
+    def check_vertical_collision(self, position_v, cubes_v, radius, height):
+        return np.any(np.abs(cubes_v - (height / 2) - position_v) < radius + height)
 
     def obstacle_at(self, position):
         pos_x, pos_y, pos_z = position
+        radius = self.__renderer.get_radius()
+        height = self.__renderer.get_perspective().get_height()
+        # focal = self.__renderer.get_perspective().get_focal()
+
+        cubes = np.array([cube.get_center() for cube in self.__renderer.get_cubes()])
+        x_collision = self.check_horizontal_collision(pos_x, cubes[..., 0], radius)
+        y_collision = self.check_vertical_collision(pos_y, cubes[..., 1], radius, height)
+        z_collision = self.check_horizontal_collision(pos_z, cubes[..., -1], radius)
+
 
         # If on ground or on top of a cube (not done yet)
-        return np.around(pos_y, decimals=1) == y
+        return x_collision & y_collision & z_collision
 
-    def on_ground(self, position):
+    def on_ground(self, position, height):
         pos_x, pos_y, pos_z = position
-        return np.abs(pos_y - y) <= 0.15
+        return pos_y + height - y >= 0

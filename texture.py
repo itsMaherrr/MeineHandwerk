@@ -1,6 +1,5 @@
 import pygame
 
-
 stone = pygame.image.load('textures/stone.png')
 floor = pygame.image.load('textures/floor.jpg')
 

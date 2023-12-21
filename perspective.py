@@ -2,20 +2,21 @@ import pygame
 import numpy as np
 from transformation_matrices import *
 
-focal = 7
+focal = 4
 alpha = beta = 100
 moving_speed = 0.2
 rotation_speed = np.pi / 180
 mouse_sensitivity = 0.002
-gravitational_pull = 0.1
+gravitational_pull = 0.2
+height = 1.5
 
 
 max_jump = 20
 
 
-@staticmethod
 def project_points(points):
-    points_z = points[..., 2][..., None] - focal
+    #points[..., -1] -= focal
+    points_z = points[..., -1][..., None]
     points_z[points_z < 1e-1] = 1e-1
     return points / points_z
 
@@ -30,6 +31,7 @@ class Perspective:
         self.__beta = beta
         self.__moving_speed = moving_speed
         self.__rotation_speed = rotation_speed
+        self.__height = height
 
         self.__angle_v = 0
         self.__angle_h = 0
@@ -38,26 +40,33 @@ class Perspective:
 
     def control(self):
         key = pygame.key.get_pressed()
+        position = self.__position.copy()
         if key[pygame.K_d]:
-            self.__position += self.__moving_speed * move_a_d(self.__angle_h)
+            position += self.__moving_speed * move_a_d(self.__angle_h)
         if key[pygame.K_q]:
-            self.__position -= self.__moving_speed * move_a_d(self.__angle_h)
+            position -= self.__moving_speed * move_a_d(self.__angle_h)
         if key[pygame.K_s]:
-            self.__position -= self.__moving_speed * move_w_s(self.__angle_h)
+            position -= self.__moving_speed * move_w_s(self.__angle_h)
         if key[pygame.K_z]:
-            self.__position += self.__moving_speed * move_w_s(self.__angle_h)
+            position += self.__moving_speed * move_w_s(self.__angle_h)
         if key[pygame.K_LCTRL]:
-            self.__position += self.__v * self.__moving_speed
+            position += self.__v * self.__moving_speed
+
+        if not self.__renderer.get_map().obstacle_at(position):
+            self.__position = position
+
         if key[pygame.K_SPACE]:
-            if self.__renderer.get_map().on_ground(self.__position) and self.__jump == max_jump:
+            if (self.__renderer.get_map().on_ground(self.get_position(), self.get_height() + gravitational_pull)
+                or self.__renderer.get_map().is_above_cube(self.get_position(), gravitational_pull))\
+                    and self.__jump == max_jump:
                 if self.__jump == max_jump:
                     self.__jump = 0
-                self.__position -= self.__v * self.__moving_speed * 2
-                self.__jump += 1
 
         if self.__jump != max_jump:
-            self.__position -= self.__v * self.__moving_speed * 2
-            self.__jump += 1
+            position = self.__position - self.__v * self.__moving_speed * 2
+            if not self.__renderer.get_map().obstacle_at(position):
+                self.__position = position
+                self.__jump += 1
 
         if key[pygame.K_RIGHT]:
             self.__angle_h += self.__rotation_speed
@@ -86,8 +95,13 @@ class Perspective:
         position = self.__position + self.__v * gravitational_pull
 
         # if nothing is intercepting player or not currently jumping
-        if not self.__renderer.get_map().obstacle_at(position) and self.__jump == max_jump:
+        if not self.__renderer.get_map().on_ground(position, self.get_height())\
+                and self.__jump == max_jump\
+                and not self.__renderer.get_map().obstacle_at(position):
             self.__position = position
+
+    def can_move(self, new_position):
+        pass
 
     def get_position(self):
         return self.__position
@@ -95,34 +109,17 @@ class Perspective:
     def get_focal(self):
         return self.__focal
 
+    def get_height(self):
+        return self.__height
+
     def get_alpha(self):
         return self.__alpha
 
     def get_beta(self):
         return self.__beta
 
-    def translation_matrix(self):
-        x, y, z, w = self.__position
-        return np.array([
-            [1, 0, 0, 0],
-            [0, 1, 0, 0],
-            [0, 0, 1, 0],
-            [-x, -y, -z, 1]
-        ])
-
     def get_angle_y(self):
         return self.__angle_v
 
     def get_angle_x(self):
         return self.__angle_h
-
-    def rotation_matrix(self):
-        ux, uy, uz = self.__u[:3]
-        vx, vy, vz = self.__v[:3]
-        kx, ky, kz = self.__k[:3]
-        return np.array([
-            [ux, vx, kx, 0],
-            [uy, vy, ky, 0],
-            [uz, vz, kz, 0],
-            [0, 0, 0, 1]
-        ])
