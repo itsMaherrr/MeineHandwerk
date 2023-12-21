@@ -1,5 +1,6 @@
 import numpy as np
 import pygame.draw
+from pygame import Vector3
 
 from transformation_matrices import *
 from perspective import project_points
@@ -22,6 +23,16 @@ CLOSE_DISTANCE = 30
 
 BOTTOM_FACE = 4
 TOP_FACE = 5
+
+F, B, L, R, T, Bt = 0, 1, 2, 3, 4, 5
+normals = np.array([
+        [0, 0, -1],
+        [0, 0, 1],
+        [-1, 0, 0],
+        [1, 0, 0],
+        [0, -1, 0],
+        [0, 1, 0]
+    ])
 
 
 def create_cube_vertices(center, radius):
@@ -94,6 +105,7 @@ class Cube:
         i = 0
         for face in screen_faces:
             #pygame.draw.polygon(self.__renderer.get_screen(), (255, 0, 0), face)
+            
             draw_quad(self.__renderer.get_screen(), face, self.__get_texture(texture_dist))
 
 

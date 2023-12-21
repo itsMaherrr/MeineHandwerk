@@ -42,14 +42,22 @@ class Renderer:
         self.__perspective = None
         self.__projector = None
         self.set_map()
+        self.set_sun()
         self.set_perspective()
         self.set_projector()
-        self.create_object([-10.5, y, 15], stone.convert_alpha())
-        self.create_object([-4.5, y, 15], stone.convert_alpha())
-        self.create_object([1.5, y, 15], stone.convert_alpha())
-        self.create_object([7.5, y, 15], stone.convert_alpha())
-        self.create_object([13.5, y, 15], stone.convert_alpha())
-        self.create_object([13.5, y, 11], stone.convert_alpha())
+        self.create_object([-12, y, 12], stone.convert_alpha())
+        self.create_object([-4, y, 12], stone.convert_alpha())
+        self.create_object([0, y, 12], stone.convert_alpha())
+        self.create_object([8, y, 12], stone.convert_alpha())
+        self.create_object([12, y, 12], stone.convert_alpha())
+        self.create_object([16, y, 12], stone.convert_alpha())
+
+
+    def set_sun(self):
+        self.__sun = sun_position
+
+    def get_sun(self):
+        return self.__sun
 
     def get_center(self):
         return self.__center
