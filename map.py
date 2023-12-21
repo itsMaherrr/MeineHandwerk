@@ -5,12 +5,14 @@ from transformation_matrices import *
 from perspective import project_points
 from texture import draw_quad
 
-shape = np.array([10, 10])
-cell_size = np.array([5, 5])
+shape = np.array([16, 16])
+cell_size = np.array([2, 2])
 y = 7.5
 
 CLOSE = 0
 FAR = 1
+
+CLOSE_DISTANCE = 18
 
 
 def generate_ground_cells(shape, cell_size, y):
@@ -38,7 +40,7 @@ class Map:
     def __init__(self, renderer, texture, y=y, shape=shape, cell_size=cell_size):
         self.__limites = get_limits(shape)
         self.__renderer = renderer
-        self.__texture = [pygame.transform.smoothscale(texture, (8, 8)), pygame.transform.smoothscale(texture, (4, 4))]
+        self.__texture = [pygame.transform.smoothscale(texture, (6, 6)), pygame.transform.smoothscale(texture, (3, 3))]
         self.__cell_size = cell_size
         self.__ground_cells = generate_ground_cells(shape, self.__cell_size, y)
 
@@ -50,6 +52,9 @@ class Map:
 
     def draw(self):
         self.screen_projection()
+
+    def get_height(self):
+        return y
 
     def screen_projection(self):
         height, width = self.__renderer.get_resolution()
@@ -66,21 +71,27 @@ class Map:
 
         focal = self.__renderer.get_perspective().get_focal()
 
-        translated_vertices_f = translated_vertices_f[np.all(translated_vertices_f[..., -1] >= -focal, axis=1)]
+        translated_vertices_f = translated_vertices_f[np.all(translated_vertices_f[..., -1] >= -focal/2.5, axis=1)]
+
+        cells_textures = (np.linalg.norm(np.mean(translated_vertices_f, axis=1), axis=1) >= CLOSE_DISTANCE).astype(np.int32)
 
         projected_vertices = project_points(translated_vertices_f)
 
         all_ground_cells = np.einsum('ijk, kl -> ijl', projected_vertices,
                                  self.__renderer.get_projector().get_screen_matrix().T)
 
-        screen_ground_cells = all_ground_cells[~(np.all(all_ground_cells[..., 0] > height, axis=1) |
-                                                 np.all(all_ground_cells[..., 1] > width, axis=1))]
+        cond = ~(np.all(all_ground_cells[..., 0] > height, axis=1) |
+                 np.all(all_ground_cells[..., 1] > width, axis=1) |
+                 np.all(all_ground_cells[..., 0] < 0, axis=1) |
+                 np.all(all_ground_cells[..., 1] < 0, axis=1))
 
+        screen_ground_cells = all_ground_cells[cond]
+        cells_textures = cells_textures[cond]
 
-
-        for cell in screen_ground_cells:
-            pygame.draw.polygon(self.__renderer.get_screen(), (0, 100, 0), cell)
-            #draw_quad(self.__renderer.get_screen(), cell, self.__get_texture(CLOSE))
+        for i in range(len(screen_ground_cells)):
+            cell = screen_ground_cells[i]
+            #pygame.draw.polygon(self.__renderer.get_screen(), (0, 100, 0), cell)
+            draw_quad(self.__renderer.get_screen(), cell, self.__get_texture(cells_textures[i]))
 
     def is_above_cube(self, position, gravitational_pull):
         position_v = position[1]
@@ -92,10 +103,10 @@ class Map:
 
 
     def check_horizontal_collision(self, position_h, cubes_h, radius):
-        return np.any(np.abs(cubes_h - position_h) < radius)
+        return np.abs(cubes_h - position_h) < radius
 
     def check_vertical_collision(self, position_v, cubes_v, radius, height):
-        return np.any(np.abs(cubes_v - (height / 2) - position_v) < radius + height)
+        return np.abs(cubes_v - (height / 2) - position_v) < radius + height
 
     def obstacle_at(self, position):
         pos_x, pos_y, pos_z = position
@@ -110,7 +121,7 @@ class Map:
 
 
         # If on ground or on top of a cube (not done yet)
-        return x_collision & y_collision & z_collision
+        return np.any(x_collision & y_collision & z_collision)
 
     def on_ground(self, position, height):
         pos_x, pos_y, pos_z = position

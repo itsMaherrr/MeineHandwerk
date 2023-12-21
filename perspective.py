@@ -1,5 +1,7 @@
 import pygame
 import numpy as np
+
+import texture
 from transformation_matrices import *
 
 focal = 4
@@ -8,7 +10,7 @@ moving_speed = 0.2
 rotation_speed = np.pi / 180
 mouse_sensitivity = 0.002
 gravitational_pull = 0.2
-height = 1.5
+height = 2
 
 
 max_jump = 20
@@ -52,6 +54,12 @@ class Perspective:
         if key[pygame.K_LCTRL]:
             position += self.__v * self.__moving_speed
 
+        event = pygame.event.poll()
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            point = self.build_cube()
+            self.__renderer.build_cube(point, texture.dirt)
+
+
         if not self.__renderer.get_map().obstacle_at(position):
             self.__position = position
 
@@ -94,14 +102,41 @@ class Perspective:
     def fall_for_gravity(self):
         position = self.__position + self.__v * gravitational_pull
 
-        # if nothing is intercepting player or not currently jumping
+        # if nothing is intercepting the player or not currently jumping
         if not self.__renderer.get_map().on_ground(position, self.get_height())\
                 and self.__jump == max_jump\
                 and not self.__renderer.get_map().obstacle_at(position):
             self.__position = position
 
-    def can_move(self, new_position):
-        pass
+    def vector_plane_intersection(self, player_position, player_direction, plane_normal, plane_point):
+        d = np.dot(plane_normal, plane_point - player_position) / np.dot(plane_normal, player_direction)
+
+        intersection_point = player_position + d * player_direction
+
+        return intersection_point
+
+
+    def build_cube(self):
+        angle_x_rad = self.get_angle_x()
+        angle_y_rad = self.get_angle_y()
+
+        player_position = self.get_position()
+
+        player_direction = np.array([
+            np.cos(angle_y_rad) * np.sin(angle_x_rad),
+            -np.sin(angle_y_rad),  # negative because the y-axis increases downwards
+            np.cos(angle_y_rad) * np.cos(angle_x_rad)
+        ])
+
+        t = (self.__renderer.get_map().get_height() - player_position[1]) / player_direction[1]
+
+        intersection_point = np.array([
+            player_position[0] + t * player_direction[0],
+            self.__renderer.get_map().get_height(),
+            player_position[2] + t * player_direction[2]
+        ])
+
+        return intersection_point
 
     def get_position(self):
         return self.__position

@@ -1,7 +1,11 @@
 import pygame
+import numpy as np
 
 stone = pygame.image.load('textures/stone.png')
 floor = pygame.image.load('textures/floor.jpg')
+wood = pygame.image.load('textures/log_oak s.png')
+dirt = pygame.image.load('textures/dirt.png')
+
 
 
 def __lerp(p1, p2, f):

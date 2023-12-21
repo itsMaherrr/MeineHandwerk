@@ -40,7 +40,7 @@ def create_cube_vertices(center, radius):
 class Cube:
     def __init__(self, renderer, texture, position, radius):
         self.__renderer = renderer
-        self.__texture = [pygame.transform.smoothscale(texture, (10, 10)), pygame.transform.smoothscale(texture, (4, 4))]
+        self.__texture = [pygame.transform.smoothscale(texture, (8, 8)), pygame.transform.smoothscale(texture, (4, 4))]
         self.__center = position
         self.__vertices = create_cube_vertices(position, radius)
         self.__faces = np.array([(FBL, FTL, FTR, FBR), (BBL, BTL, BTR, BBR), (FBL, BBL, BTL, FTL),
@@ -87,7 +87,9 @@ class Cube:
         screen_faces = screen_faces[self.__faces[apparent_faces[::-1]]]
 
         screen_faces = screen_faces[~(np.all(screen_faces[..., 0] > height, axis=1) |
-                                                 np.all(screen_faces[..., 1] > width, axis=1))]
+                                      np.all(screen_faces[..., 0] < 0, axis=1) |
+                                      np.all(screen_faces[..., 1] < 0, axis=1) |
+                                      np.all(screen_faces[..., 1] > width, axis=1))]
 
         i = 0
         for face in screen_faces:
